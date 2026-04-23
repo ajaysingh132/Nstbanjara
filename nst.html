@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<title>GBSBFORYOU NST App</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #f5f5f5;
+}
+
+.container {
+  max-width: 700px;
+  margin: auto;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+}
+
+button {
+  padding: 10px;
+  margin: 5px;
+  border: none;
+  background: #007bff;
+  color: white;
+  border-radius: 5px;
+}
+
+.tab {
+  display: none;
+}
+
+.active {
+  display: block;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>GBSBFORYOU NST System</h2>
+
+<button onclick="showTab('survey')">📋 Survey</button>
+<button onclick="showTab('dashboard')">📊 Dashboard</button>
+
+<!-- SURVEY -->
+<div id="survey" class="tab active">
+
+<input id="name" placeholder="नाम">
+<input id="community" placeholder="समुदाय">
+<input id="members" type="number" placeholder="सदस्य संख्या">
+
+<select id="residence">
+<option>स्थायी</option>
+<option>अर्ध-स्थायी</option>
+<option>घुमंतु</option>
+</select>
+
+<button onclick="save()">सेव करें</button>
+<button onclick="exportCSV()">Export CSV</button>
+
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="tab">
+
+<h3>डेटा सारांश</h3>
+<div id="total"></div>
+<div id="banjara"></div>
+
+<button onclick="loadDashboard()">Refresh</button>
+
+</div>
+
+</div>
+
+<script>
+
+// TAB SWITCH
+function showTab(tab) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById(tab).classList.add("active");
+}
+
+// DATABASE
+let db;
+let request = indexedDB.open("NST_DB", 1);
+
+request.onupgradeneeded = e => {
+  db = e.target.result;
+  db.createObjectStore("survey", { keyPath: "id", autoIncrement: true });
+};
+
+request.onsuccess = e => {
+  db = e.target.result;
+};
+
+// SAVE DATA
+function save() {
+  let data = {
+    name: name.value,
+    community: community.value,
+    members: members.value,
+    residence: residence.value
+  };
+
+  let tx = db.transaction("survey", "readwrite");
+  tx.objectStore("survey").add(data);
+
+  alert("डेटा सेव हो गया");
+}
+
+// EXPORT CSV
+function exportCSV() {
+  let tx = db.transaction("survey", "readonly");
+  let store = tx.objectStore("survey");
+
+  let req = store.getAll();
+
+  req.onsuccess = () => {
+    let csv = "Name,Community,Members,Residence\n";
+
+    req.result.forEach(d => {
+      csv += `${d.name},${d.community},${d.members},${d.residence}\n`;
+    });
+
+    let blob = new Blob([csv]);
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "NST_Data.csv";
+    a.click();
+  };
+}
+
+// DASHBOARD
+function loadDashboard() {
+  let tx = db.transaction("survey", "readonly");
+  let store = tx.objectStore("survey");
+
+  let req = store.getAll();
+
+  req.onsuccess = () => {
+    let total = req.result.length;
+    let banjara = req.result.filter(d =>
+      d.community.toLowerCase().includes("banjara")
+    ).length;
+
+    document.getElementById("total").innerText = "Total परिवार: " + total;
+    document.getElementById("banjara").innerText = "बंजारा: " + banjara;
+  };
+}
+
+</script>
+
+</body>
+  </html>
+
